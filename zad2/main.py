@@ -15,7 +15,7 @@ def main():
     iterations = 1000
     neighbors_f = get_12_neighbors
     result = simulanneal(image, lambda i: generate_next_state(i, neighbors_f),
-                         lambda i: get_image_energy(i, energy_black_in_column, neighbors_f),
+                         lambda i: get_image_energy(i, energy_black_only_1_neighbor, neighbors_f),
                          temp_max, lambda t: t * 0.95, iterations)
     show_image(result)
 

@@ -6,7 +6,7 @@ def get_image_energy(image, energy_f, neighbors_f):
                 for y in range(len(image)) for x in range(len(image))])
 
 
-def energy_black_1_over_r2(image, block, neighbors):
+def energy_black_1_over_r(image, block, neighbors):
     energy = 0
     if image[block[0]][block[1]] != 'k':
         return 0
@@ -17,8 +17,8 @@ def energy_black_1_over_r2(image, block, neighbors):
     return energy
 
 
-def energy_black_neg_1_over_r2(image, block, neighbors):
-    return -energy_black_1_over_r2(image, block, neighbors)
+def energy_black_neg_1_over_r(image, block, neighbors):
+    return -energy_black_1_over_r(image, block, neighbors)
 
 
 def energy_black_in_column(image, block, neighbors):
@@ -37,8 +37,8 @@ def energy_black_only_1_neighbor(image, block, neighbors):
         return 0
     for neighbor in neighbors:
         if image[neighbor[0]][neighbor[1]] == 'k':
-            r = (math.sqrt((block[0] - neighbor[0])**2) +
-                 (block[1] - neighbor[1])**2)
+            r = math.sqrt((block[0] - neighbor[0])**2 +
+                (block[1] - neighbor[1])**2)
             if r == 1:
                 energy += -1
             else:
