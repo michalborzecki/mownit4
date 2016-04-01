@@ -5,11 +5,13 @@ import matplotlib.pyplot as plt
 
 def main():
     low = 0
-    high = 1000
-    points = generate_points_groups(20, 3, 0.3, 10, 10)
+    high = 3000
+    # points = generate_points_groups(50, 9, 0.3, 10, 10)
+    # points = generate_points_with_gaussian_dist(40, 4, 0.3, 10, 10)
+    points = generate_points_with_uniform_dist(40, 10, 10)
     plot(points, 'red')
     result = simulanneal(points, arbitrary_swap, value, high, low,
-                linear_probability, temp_change, 10000)
+                temp_change, 3000)
     plot(result, 'blue')
 
 
@@ -69,7 +71,7 @@ def consecutive_swap(state):
 def arbitrary_swap(state):
     a = random.randint(1, len(state) - 1)
     b = random.randint(1, len(state) - 2)
-    if b >= a:
+    if b == a:
         b += 1
     new_state = state[:]
     new_state[a], new_state[b] = new_state[b], new_state[a]
@@ -83,25 +85,23 @@ def value(state):
     return val
 
 
-def linear_probability(t, temp_max, temp_min):
-    return .5 * np.sqrt((t - temp_min) / (temp_max - temp_min))
-
-
 def temp_change(t):
     return t * 0.998
 
 
 def simulanneal(start_state, next_state_func, value_func, temp_max, temp_min,
-                probability_func, temp_change_func, iterations):
+                temp_change_func, iterations):
     actual_state = start_state
     best_state = actual_state
     temp = temp_max
     points = [(0, value(actual_state))]
     for i in range(0, iterations):
-        next_state = next_state_func(actual_state)
-        probability = probability_func(temp, temp_max, temp_min)
+        if i % 1000 == 0:
+            print(i, value_func(best_state))
+        next_states = [next_state_func(actual_state) for _ in range(10)]
+        next_state = min(next_states, key=lambda s: value_func(s))
         val = value_func(next_state)
-        # probability = np.exp(-(val - value_func(actual_state))/temp)
+        probability = np.exp(-temp_max*(val - value_func(actual_state))/temp)
         if value_func(actual_state) > val \
                 or random.random() < probability:
             actual_state = next_state
