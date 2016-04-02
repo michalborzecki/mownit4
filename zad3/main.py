@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import math
 
 
 def main():
@@ -14,11 +15,11 @@ def main():
         exit()
     print_sudoku_with_value(sudoku)
 
-    temp_max = 5000
+    temp_max = 2000
     iterations = 100000
     result = simulanneal(sudoku, lambda s: fill_sudoku(s, variables),
                          lambda s: generate_state(s, variables), sudoku_value,
-                         temp_max, lambda t: t * 0.995, iterations)
+                         temp_max, lambda t: t * 0.996, iterations)
     print_sudoku_with_value(result)
 
 
@@ -28,29 +29,30 @@ def print_sudoku_with_value(sudoku):
 
 
 def plot(points, color='b'):
-    for i in range(len(points) - 1):
-        plt.plot([points[i][0], points[(i + 1)][0]],
-                 [points[i][1], points[(i + 1)][1]], lw=1, c=color)
+    x = [p[0] for p in points]
+    y = [p[1] for p in points]
+    plt.plot(x, y, lw=1, c=color)
     plt.show()
 
 
 def simulanneal(start, reset_state_f, next_state_f, value_f, temp_max,
                 temp_change_f, iterations):
-    actual = best = start
+    actual = best = [r[:] for r in start]
     actual_val = best_val = value_f(actual)
     temp = temp_max
-    # points = [(0, actual_val)]
+    points = [(0, actual_val)]
     counter = 0
     for i in range(1, iterations):
-        states = [next_state_f(actual) for _ in range(50)]
-        next_state = min(states, key=lambda s: value_f(s))
-        val = value_f(next_state)
-        prob = np.exp(-temp_max*(val - actual_val)/temp)
+        states = [next_state_f(actual) for _ in range(20)]
+        next_state = min(states, key=lambda s: sudoku_value_next(actual, actual_val, s[0], s[1]))
+        val = sudoku_value_next(actual, actual_val, next_state[0], next_state[1])
+        prob = np.exp(-math.sqrt(temp_max)*(val - actual_val)/temp)
         if actual_val >= val or random.random() <= prob:
-            actual, actual_val = next_state, val
+            apply_next_state(actual, next_state[0], next_state[1])
+            actual_val = val
+            points.append((i, val))
             if best_val > val:
-                # points.append((i, val))
-                best, best_val = actual, actual_val
+                best, best_val = [r[:] for r in actual], actual_val
                 if val == 0:
                     break
 
@@ -64,41 +66,35 @@ def simulanneal(start, reset_state_f, next_state_f, value_f, temp_max,
                 reset_state_f(start)
                 actual, actual_val = start, value_f(start)
                 counter = 0
-    # points.append((iterations, value_f(best)))
-    # plot(points)
+    points.append((iterations, value_f(best)))
+    plot(points)
     return best
 
 
 def fill_sudoku(sudoku, variables):
     if len(variables) == 0:
         return -1
-    for xy in variables:
-        sudoku[xy[0]][xy[1]] = 0
+    for r in variables:
+        for c in r:
+            for xy in c:
+                sudoku[xy[0]][xy[1]] = 0
 
     for r in range(0, 7, 3):  # 0, 3, 6
         for c in range(0, 7, 3):
             left_numbers = set(range(1, 10)).difference(
                 {x for row in sudoku[r:r+3] for x in row[c:c+3]})
-            left_indexes = [xy for xy in variables if xy[0] in range(r, r+3) and xy[1] in range(c, c+3)]
+            left_indexes = [xy for xy in variables[r//3][c//3] if xy[0] in range(r, r+3) and xy[1] in range(c, c+3)]
             for xy, num in zip(np.random.permutation(left_indexes), left_numbers):
                 sudoku[xy[0]][xy[1]] = num
     return 0
 
 
 def generate_state(sudoku, variables):
-    new_state = [row[:] for row in sudoku]
-
     indexes = []
     while len(indexes) < 2:
-        r = random.choice(range(0, 7, 3))
-        c = random.choice(range(0, 7, 3))
-        indexes = [xy for xy in variables if xy[0] in range(r, r+3) and xy[1] in range(c, c+3)]
+        indexes = variables[random.choice(range(3))][random.choice(range(3))]
 
-    xy1, xy2 = random.sample(indexes, 2)
-    new_state[xy1[0]][xy1[1]], new_state[xy2[0]][xy2[1]] = \
-        new_state[xy2[0]][xy2[1]], new_state[xy1[0]][xy1[1]]
-
-    return new_state
+    return random.sample(indexes, 2)
 
 
 def sudoku_value(sudoku):
@@ -108,6 +104,26 @@ def sudoku_value(sudoku):
     for column in range(9):
         value += 9 - len({sudoku[x][column] for x in range(9)})
     return value
+
+
+def apply_next_state(sudoku, num1, num2):
+    sudoku[num1[0]][num1[1]], sudoku[num2[0]][num2[1]] = \
+        sudoku[num2[0]][num2[1]], sudoku[num1[0]][num1[1]]
+
+
+def sudoku_value_next(sudoku, old_value, num1, num2):
+    part_value = 0
+    for row in (sudoku[num1[0]], sudoku[num2[0]]):
+        part_value -= 9 - len(set(row))
+    for column in (num1[1], num2[1]):
+        part_value -= 9 - len({sudoku[x][column] for x in range(9)})
+    apply_next_state(sudoku, num1, num2)
+    for row in (sudoku[num1[0]], sudoku[num2[0]]):
+        part_value += 9 - len(set(row))
+    for column in (num1[1], num2[1]):
+        part_value += 9 - len({sudoku[x][column] for x in range(9)})
+    apply_next_state(sudoku, num1, num2)
+    return old_value + part_value
 
 
 def read_file(path):
@@ -128,8 +144,11 @@ def read_file(path):
         print("Incorrect file format.")
         return [], []
 
-    variables = [(r, c) for c in range(9) for r in range(9)
-                 if sudoku[r][c] == 0]
+    variables = [[] for _ in range(3)]
+    for r in range(3):
+        for c in range(3):
+            variables[r].append([(r2, c2) for r2 in range(3*r, 3*r+3)
+                                 for c2 in range(3*c, 3*c+3) if sudoku[r2][c2] == 0])
     if len(variables) == 0:
         print("Sudoku is solved.")
         return [], []
