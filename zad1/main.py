@@ -1,14 +1,15 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 
 def main():
     low = 0
     high = 3000
-    # points = generate_points_groups(50, 9, 0.3, 10, 10)
-    # points = generate_points_with_gaussian_dist(40, 4, 0.3, 10, 10)
-    points = generate_points_with_uniform_dist(40, 10, 10)
+    # points = generate_points_groups(40, 9, 0.3, 10, 10)
+    # points = generate_points_with_gaussian_dist(30, 4, 0.3, 10, 10)
+    points = generate_points_with_uniform_dist(50, 10, 10)
     plot(points, 'red')
     result = simulanneal(points, arbitrary_swap, value, high, low,
                 temp_change, 3000)
@@ -86,7 +87,7 @@ def value(state):
 
 
 def temp_change(t):
-    return t * 0.998
+    return t * 0.996
 
 
 def simulanneal(start_state, next_state_func, value_func, temp_max, temp_min,
@@ -98,10 +99,10 @@ def simulanneal(start_state, next_state_func, value_func, temp_max, temp_min,
     for i in range(0, iterations):
         if i % 1000 == 0:
             print(i, value_func(best_state))
-        next_states = [next_state_func(actual_state) for _ in range(10)]
+        next_states = [next_state_func(actual_state) for _ in range(1)]
         next_state = min(next_states, key=lambda s: value_func(s))
         val = value_func(next_state)
-        probability = np.exp(-temp_max*(val - value_func(actual_state))/temp)
+        probability = np.exp(-(math.sqrt(temp_max))*(val - value_func(actual_state))/temp)
         if value_func(actual_state) > val \
                 or random.random() < probability:
             actual_state = next_state
